@@ -3,101 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精神ポーション（瀕死用）</title>
+    <title>精神ポーション</title>
     <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            color: #333;
-        }
-        .container {
-            width: 85%;
-            max-width: 450px;
-            background: white;
-            padding: 40px 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-            text-align: center;
-        }
-        h1 {
-            font-size: 1.6rem;
-            margin: 0;
-            line-height: 1.6;
-            color: #2c3e50;
-            min-height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            word-break: break-all;
-        }
-        .btn {
-            margin-top: 40px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-size: 0.9rem;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: 0.3s;
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
-        }
-        .btn:active { transform: scale(0.95); }
+        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { width: 85%; max-width: 450px; background: white; padding: 50px 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; }
+        h1 { font-size: 1.6rem; margin: 0; line-height: 1.7; color: #333; min-height: 150px; display: flex; align-items: center; justify-content: center; }
+        .btn { margin-top: 40px; background-color: #4CAF50; color: white; border: none; padding: 12px 25px; font-size: 0.9rem; border-radius: 50px; cursor: pointer; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h1 id="triviaText">読み込み中...</h1>
     <button class="btn" onclick="getRandomTrivia()">他の言葉を見る</button>
 </div>
-
 <script>
-    const baseCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv';
-    const csvUrl = baseCsvUrl + "&t=" + new Date().getTime();
-
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + new Date().getTime();
     let allData = [];
-
     async function loadData() {
         try {
             const res = await fetch(csvUrl);
             const text = await res.text();
             const lines = text.trim().split(/\r?\n/);
-            
             allData = lines.map(line => {
                 const parts = line.split(/,(.*)/);
-                // カンマの右側（言葉）を優先し、なければ左側（番号）を言葉として扱う
-                const val = parts[1] ? parts[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : parts[0].trim();
-                return val;
-            }).filter(text => text.length > 1);
-
-            showDaily();
-        } catch (e) {
-            document.getElementById('triviaText').innerText = "読み込みエラー";
-        }
+                return parts[1] ? parts[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : parts[0].replace(/"/g, '').trim();
+            }).filter(t => t.length > 1);
+            show();
+        } catch (e) { document.getElementById('triviaText').innerText = "エラー"; }
     }
-
-    function showDaily() {
-        if (!allData.length) return;
+    function show() {
         const day = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
         display(allData[day % allData.length]);
     }
-
-    function getRandomTrivia() {
-        if (!allData.length) return;
-        display(allData[Math.floor(Math.random() * allData.length)]);
-    }
-
-    function display(text) {
-        document.getElementById('triviaText').innerText = text;
-    }
+    function getRandomTrivia() { display(allData[Math.floor(Math.random() * allData.length)]); }
+    function display(t) { document.getElementById('triviaText').innerText = t; }
     loadData();
 </script>
-
 </body>
 </html>
