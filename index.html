@@ -9,51 +9,65 @@
         .container { width: 90%; max-width: 450px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
         .date-label { font-size: 0.9rem; color: #888; margin-bottom: 10px; }
         .number { font-size: 1.2rem; color: #4CAF50; font-weight: bold; margin-bottom: 5px; }
-        h1 { font-size: 1.6rem; margin: 15px 0; line-height: 1.4; color: #2c3e50; min-height: 80px; display: flex; align-items: center; justify-content: center; }
-        .btn { margin-top: 30px; background-color: #4CAF50; color: white; border: none; padding: 12px 25px; font-size: 1rem; border-radius: 50px; cursor: pointer; }
+        h1 { font-size: 1.6rem; margin: 15px 0; line-height: 1.4; color: #2c3e50; min-height: 100px; display: flex; align-items: center; justify-content: center; }
+        .btn { margin-top: 30px; background-color: #4CAF50; color: white; border: none; padding: 12px 25px; font-size: 1rem; border-radius: 50px; cursor: pointer; transition: 0.2s; }
         .btn:active { transform: scale(0.95); }
+        .error { color: #e74c3c; font-size: 0.8rem; margin-top: 15px; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="date-label" id="todayDate"></div>
-    <div class="number" id="triviaNum">...</div>
-    <h1 id="triviaText">読み込み中...</h1>
+    <div id="displayArea">
+        <div class="number" id="triviaNum">...</div>
+        <h1 id="triviaText">読み込み中...</h1>
+    </div>
     <button class="btn" onclick="getRandomTrivia()">他の言葉を見る</button>
+    <div id="errMsg" class="error"></div>
 </div>
 <script>
-    // 完全に1行で書くことでエラーを防ぎます
     const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv';
 
     let allData = [];
-    const d = new Date();
-    document.getElementById('todayDate').innerText = d.toLocaleDateString() + " の心の栄養";
+    document.getElementById('todayDate').innerText = new Date().toLocaleDateString() + " の心の栄養";
 
     async function loadData() {
         try {
             const res = await fetch(csvUrl);
+            if (!res.ok) throw new Error("取得失敗");
             const text = await res.text();
+            
+            // 行に分解して解析
             const lines = text.trim().split(/\r?\n/);
-            allData = lines.map(line => {
-                const parts = line.split(/,(.*)/);
-                return { id: parts[0].replace(/"/g, ''), text: (parts[1] || "").replace(/^"|"$/g, '').replace(/""/g, '"').trim() };
-            }).filter(item => item.text);
+            allData = lines.map((line, index) => {
+                // カンマ、またはタブで分割を試みる
+                const parts = line.split(/[,|\t](.*)/);
+                const id = parts[0] ? parts[0].replace(/"/g, '').trim() : (index + 1);
+                const val = parts[1] ? parts[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : parts[0].trim();
+                return { id: id, text: val };
+            }).filter(item => item.text && item.text.length > 1);
+
+            if (allData.length === 0) throw new Error("データが空です");
             showDaily();
         } catch (e) {
             document.getElementById('triviaText').innerText = "読み込みエラー";
+            document.getElementById('errMsg').innerText = "スプレッドシートのA列とB列に文字が入っているか確認してください。";
         }
     }
 
     function showDaily() {
+        if (allData.length === 0) return;
         const day = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
         display(allData[day % allData.length]);
     }
 
     function getRandomTrivia() {
+        if (allData.length === 0) return;
         display(allData[Math.floor(Math.random() * allData.length)]);
     }
 
     function display(item) {
+        if (!item) return;
         document.getElementById('triviaNum').innerText = "No. " + item.id;
         document.getElementById('triviaText').innerText = item.text;
     }
