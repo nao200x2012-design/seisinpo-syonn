@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精神ポーション（瀕死用）</title>
+    <style>
+        /* デザイン：清潔感のあるカードUI */
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        .container {
+            width: 90%;
+            max-width: 450px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .date-label {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .number {
+            font-size: 1.2rem;
+            color: #4CAF50;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        h1 {
+            font-size: 1.6rem;
+            margin: 15px 0;
+            line-height: 1.4;
+            color: #2c3e50;
+        }
+        .btn {
+            margin-top: 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+            transition: 0.3s;
+        }
+        .btn:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="date-label" id="todayDate"></div>
+    <div class="number" id="triviaNum">Loading...</div>
+    <h1 id="triviaText">読み込み中...</h1>
+    <button class="btn" onclick="getRandomTrivia()">他の言葉を見る</button>
+</div>
+
+<script>
+    // ★ここに作成したスプレッドシートの「CSV公開URL」を貼り付けてください
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?gid=527897899&single=true&output=csv
+';
+
+    let allData = [];
+
+    // 今日の日付を表示
+    const d = new Date();
+    document.getElementById('todayDate').innerText = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} の心の栄養`;
+
+    async function loadData() {
+        try {
+            const response = await fetch(csvUrl);
+            const csvText = await response.text();
+            
+            // CSVのパース（カンマ問題を回避する正規表現）
+            allData = parseCSV(csvText);
+            
+            // 最初は「日替わり」で表示
+            showDailyTrivia();
+        } catch (e) {
+            document.getElementById('triviaText').innerText = "データの読み込みに失敗しました。";
+        }
+    }
+
+    // CSVを正しく分割する関数（説明文の中のカンマを無視する）
+    function parseCSV(text) {
+        const lines = text.split(/\r?\n/);
+        return lines.map(line => {
+            // カンマで分割するが、引用符などは考慮しない簡易版
+            // スプレッドシート側で「A列：番号」「B列：言葉」にしている前提
+            const parts = line.split(/,(.*)/); 
+            return {
+                id: parts[0],
+                text: parts[1] ? parts[1].replace(/"/g, '') : ""
+            };
+        }).filter(item => item.text !== "");
+    }
+
+    // 日替わりロジック（日付を元に番号を決める）
+    function showDailyTrivia() {
+        const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+        const index = dayOfYear % allData.length;
+        display(allData[index]);
+    }
+
+    // ランダム表示（ボタン用）
+    function getRandomTrivia() {
+        const index = Math.floor(Math.random() * allData.length);
+        display(allData[index]);
+    }
+
+    function display(item) {
+        document.getElementById('triviaNum').innerText = `No. ${item.id}`;
+        document.getElementById('triviaText').innerText = item.text;
+    }
+
+    loadData();
+</script>
+
+</body>
+</html>
