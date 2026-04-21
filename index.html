@@ -53,23 +53,26 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
             transition: 0.3s;
+            outline: none;
         }
         .btn:active { transform: scale(0.95); }
+        .error-msg { color: #e74c3c; font-size: 0.9rem; margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="date-label" id="todayDate"></div>
-    <div class="number" id="triviaNum">Loading...</div>
+    <div class="number" id="triviaNum">...</div>
     <h1 id="triviaText">読み込み中...</h1>
     <button class="btn" onclick="getRandomTrivia()">他の言葉を見る</button>
+    <div id="errorMessage" class="error-msg"></div>
 </div>
 
 <script>
-    // ★ここに作成したスプレッドシートの「CSV公開URL」を貼り付けてください
-    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?gid=527897899&single=true&output=csv
-';
+    // URLの末尾にある不要な改行やスペースを自動で削除するように設定
+    const rawUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?gid=527897899&single=true&output=csv';
+    const csvUrl = rawUrl.trim();
 
     let allData = [];
 
@@ -80,41 +83,53 @@
     async function loadData() {
         try {
             const response = await fetch(csvUrl);
-            const csvText = await response.text();
+            if (!response.ok) throw new Error('スプレッドシートへのアクセスに失敗しました');
             
-            // CSVのパース（カンマ問題を回避する正規表現）
+            const csvText = await response.text();
             allData = parseCSV(csvText);
+            
+            if (allData.length === 0) throw new Error('データが読み込めませんでした');
             
             // 最初は「日替わり」で表示
             showDailyTrivia();
         } catch (e) {
-            document.getElementById('triviaText').innerText = "データの読み込みに失敗しました。";
+            document.getElementById('triviaText').innerText = "読み込みエラー";
+            document.getElementById('errorMessage').innerText = "スプレッドシートの公開設定を確認してください。";
+            console.error(e);
         }
     }
 
-    // CSVを正しく分割する関数（説明文の中のカンマを無視する）
+    // CSVを正しく分割する関数（カンマや引用符の処理を強化）
     function parseCSV(text) {
-        const lines = text.split(/\r?\n/);
+        const lines = text.trim().split(/\r?\n/);
         return lines.map(line => {
-            // カンマで分割するが、引用符などは考慮しない簡易版
-            // スプレッドシート側で「A列：番号」「B列：言葉」にしている前提
-            const parts = line.split(/,(.*)/); 
-            return {
-                id: parts[0],
-                text: parts[1] ? parts[1].replace(/"/g, '') : ""
-            };
-        }).filter(item => item.text !== "");
+            // 最初のカンマだけで分割する
+            const firstComma = line.indexOf(',');
+            if (firstComma === -1) return null;
+
+            const id = line.substring(0, firstComma).replace(/"/g, '').trim();
+            const textContent = line.substring(firstComma + 1).replace(/^"|"$/g, '').replace(/""/g, '"').trim();
+            
+            return { id: id, text: textContent };
+        }).filter(item => item !== null && item.text !== "");
     }
 
-    // 日替わりロジック（日付を元に番号を決める）
+    // 日替わりロジック
     function showDailyTrivia() {
-        const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+        if (allData.length === 0) return;
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 0);
+        const diff = now - start;
+        const oneDay = 1000 * 60 * 60 * 24;
+        const dayOfYear = Math.floor(diff / oneDay);
+        
         const index = dayOfYear % allData.length;
         display(allData[index]);
     }
 
     // ランダム表示（ボタン用）
     function getRandomTrivia() {
+        if (allData.length === 0) return;
         const index = Math.floor(Math.random() * allData.length);
         display(allData[index]);
     }
@@ -122,6 +137,7 @@
     function display(item) {
         document.getElementById('triviaNum').innerText = `No. ${item.id}`;
         document.getElementById('triviaText').innerText = item.text;
+        document.getElementById('errorMessage').innerText = "";
     }
 
     loadData();
