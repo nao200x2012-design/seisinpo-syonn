@@ -56,7 +56,7 @@
             outline: none;
         }
         .btn:active { transform: scale(0.95); }
-        .error-msg { color: #e74c3c; font-size: 0.9rem; margin-top: 20px; }
+        .error-msg { color: #e74c3c; font-size: 0.8rem; margin-top: 20px; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -70,9 +70,9 @@
 </div>
 
 <script>
-    // URLの末尾にある不要な改行やスペースを自動で削除するように設定
+    // ★スプレッドシートのURL（改行や空白を自動除去する処理を追加）
     const rawUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv';
-    const csvUrl = rawUrl.trim();
+    const csvUrl = rawUrl.replace(/\s+/g, ""); // 空白・改行を完全に排除
 
     let allData = [];
 
@@ -83,38 +83,42 @@
     async function loadData() {
         try {
             const response = await fetch(csvUrl);
-            if (!response.ok) throw new Error('スプレッドシートへのアクセスに失敗しました');
+            if (!response.ok) throw new Error('スプレッドシートにアクセスできません。公開設定を確認してください。');
             
             const csvText = await response.text();
             allData = parseCSV(csvText);
             
-            if (allData.length === 0) throw new Error('データが読み込めませんでした');
+            if (allData.length === 0) throw new Error('データが空、または正しく解析できません。');
             
             // 最初は「日替わり」で表示
             showDailyTrivia();
         } catch (e) {
             document.getElementById('triviaText').innerText = "読み込みエラー";
-            document.getElementById('errorMessage').innerText = "スプレッドシートの公開設定を確認してください。";
+            document.getElementById('errorMessage').innerHTML = e.message + "<br>※スプレッドシートの「ウェブに公開」が『CSV』になっているか再確認してください。";
             console.error(e);
         }
     }
 
-    // CSVを正しく分割する関数（カンマや引用符の処理を強化）
     function parseCSV(text) {
+        // 行ごとに分割
         const lines = text.trim().split(/\r?\n/);
-        return lines.map(line => {
-            // 最初のカンマだけで分割する
+        const result = [];
+
+        for (let line of lines) {
+            // 最初のカンマの位置を探す
             const firstComma = line.indexOf(',');
-            if (firstComma === -1) return null;
+            if (firstComma === -1) continue;
 
             const id = line.substring(0, firstComma).replace(/"/g, '').trim();
-            const textContent = line.substring(firstComma + 1).replace(/^"|"$/g, '').replace(/""/g, '"').trim();
+            const content = line.substring(firstComma + 1).replace(/^"|"$/g, '').replace(/""/g, '"').trim();
             
-            return { id: id, text: textContent };
-        }).filter(item => item !== null && item.text !== "");
+            if (content) {
+                result.push({ id: id, text: content });
+            }
+        }
+        return result;
     }
 
-    // 日替わりロジック
     function showDailyTrivia() {
         if (allData.length === 0) return;
         const now = new Date();
@@ -127,7 +131,6 @@
         display(allData[index]);
     }
 
-    // ランダム表示（ボタン用）
     function getRandomTrivia() {
         if (allData.length === 0) return;
         const index = Math.floor(Math.random() * allData.length);
