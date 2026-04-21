@@ -80,12 +80,18 @@
         <h1 id="triviaText"></h1>
         <button class="sub-btn" onclick="getRandomTrivia()">他の言葉を仰ぐ</button>
     </div>
-    <audio id="bgm" src="bgm.mp3" loop></audio>
+    
+    <audio id="bgm" loop></audio>
+
     <script>
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + new Date().getTime();
         let allData = [];
         let isTyping = false;
         const audio = document.getElementById('bgm');
+
+        // ★音楽ファイルを強制的に最新状態で読み込む
+        audio.src = 'bgm.mp3?v=' + new Date().getTime();
+
         async function loadData() {
             try {
                 const res = await fetch(csvUrl);
@@ -97,21 +103,29 @@
                 }).filter(t => t.length > 1);
             } catch (e) { console.error("データ取得エラー"); }
         }
+
         function startExperience() {
             document.getElementById('startScreen').style.opacity = '0';
             setTimeout(() => {
                 document.getElementById('startScreen').style.display = 'none';
                 document.getElementById('mainContent').style.opacity = '1';
             }, 1000);
+            
             audio.volume = 0.3;
-            audio.play();
+            // 再生に失敗した場合にエラーを表示
+            audio.play().catch(e => {
+                console.error("音楽再生に失敗しました:", e);
+                alert("音楽の再生に失敗しました。ファイルが bgm.mp3 という名前で保存されているか確認してください。");
+            });
             showDaily();
         }
+
         function formatText(text) {
             let formatted = text.replace(/([、。！？」])\s*/g, '$1<br>') 
                                 .replace(/(.{12,18}?[、。！？」])/g, '$1<br>');
             return formatted.replace(/([一-龠]+)\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
         }
+
         async function typeWriter(fullText) {
             if (isTyping) return;
             isTyping = true;
@@ -136,15 +150,18 @@
             }
             isTyping = false;
         }
+
         function showDaily() {
             if (!allData.length) return;
             const day = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
             typeWriter(allData[day % allData.length]);
         }
+
         function getRandomTrivia() {
             if (isTyping) return;
             typeWriter(allData[Math.floor(Math.random() * allData.length)]);
         }
+
         loadData();
     </script>
 </body>
