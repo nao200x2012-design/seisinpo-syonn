@@ -71,7 +71,8 @@
 
 <script>
     // ★スプレッドシートのURL（改行や空白を自動除去する処理を追加）
-    const rawUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv';
+    const rawUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv
+';
     const csvUrl = rawUrl.replace(/\s+/g, ""); // 空白・改行を完全に排除
 
     let allData = [];
