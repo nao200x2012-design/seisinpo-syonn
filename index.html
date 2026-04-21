@@ -7,109 +7,145 @@
     <link href="https://fonts.googleapis.com/css2?family=Sawarabi+Mincho&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Sawarabi Mincho', serif; /* 和風の筆致に近い明朝体 */
+            font-family: 'Sawarabi Mincho', serif;
             background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            overflow: hidden;
+        }
+        #startScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 1s ease;
         }
         .container {
             width: 85%;
             max-width: 500px;
             background: #fff;
             padding: 60px 40px;
-            border-radius: 2px; /* 和紙のような角のあるデザイン */
+            border-radius: 2px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             text-align: center;
-            position: relative;
+            opacity: 0;
+            transition: opacity 2s ease;
         }
         h1 {
             font-size: 1.8rem;
             margin: 0;
-            line-height: 2.0;
+            line-height: 2.8;
             color: #1a1a1a;
-            min-height: 180px;
+            min-height: 220px;
             display: flex;
             align-items: center;
             justify-content: center;
-            word-break: break-all;
-            white-space: pre-wrap; /* 改行を反映 */
+            flex-direction: column;
         }
+        ruby rt { font-size: 0.8rem; color: #666; }
         .btn {
-            margin-top: 50px;
             background-color: #333;
             color: #fff;
             border: none;
-            padding: 10px 20px;
-            font-size: 0.8rem;
-            letter-spacing: 0.1rem;
+            padding: 15px 35px;
+            font-size: 1rem;
+            letter-spacing: 0.2rem;
             cursor: pointer;
-            opacity: 0.6;
+            border-radius: 2px;
             transition: 0.5s;
         }
-        .btn:hover { opacity: 1; }
+        .btn:hover { background-color: #000; letter-spacing: 0.4rem; }
+        .sub-btn {
+            margin-top: 50px;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1 id="triviaText"></h1>
-    <button class="btn" onclick="getRandomTrivia()">他の言葉を仰ぐ</button>
-</div>
-
-<script>
-    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + new Date().getTime();
-    let allData = [];
-    let currentText = "";
-    let isTyping = false;
-
-    async function loadData() {
-        try {
-            const res = await fetch(csvUrl);
-            const text = await res.text();
-            const lines = text.trim().split(/\r?\n/);
-            allData = lines.map(line => {
-                const parts = line.split(/,(.*)/);
-                return parts[1] ? parts[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : parts[0].replace(/"/g, '').trim();
-            }).filter(t => t.length > 1);
-            show();
-        } catch (e) { document.getElementById('triviaText').innerText = "読み込みに失敗しました"; }
-    }
-
-    function show() {
-        const day = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-        typeWriter(allData[day % allData.length]);
-    }
-
-    function getRandomTrivia() {
-        if (isTyping) return; // 執筆中はボタン無効
-        typeWriter(allData[Math.floor(Math.random() * allData.length)]);
-    }
-
-    // 1文字ずつ書いていく演出
-    function typeWriter(text) {
-        isTyping = true;
-        const target = document.getElementById('triviaText');
-        target.innerText = "";
-        let i = 0;
-        
-        // 文字数に応じて速度を調整（全体で約3〜5秒になるように）
-        const speed = Math.max(80, Math.min(150, 4000 / text.length));
-
-        function type() {
-            if (i < text.length) {
-                target.innerText += text.charAt(i);
-                i++;
-                setTimeout(type, speed);
-            } else {
-                isTyping = false;
-            }
+    <div id="startScreen">
+        <button class="btn" onclick="startExperience()">精神ポーションを仰ぐ</button>
+    </div>
+    <div class="container" id="mainContent">
+        <h1 id="triviaText"></h1>
+        <button class="sub-btn" onclick="getRandomTrivia()">他の言葉を仰ぐ</button>
+    </div>
+    <audio id="bgm" src="bgm.mp3" loop></audio>
+    <script>
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + new Date().getTime();
+        let allData = [];
+        let isTyping = false;
+        const audio = document.getElementById('bgm');
+        async function loadData() {
+            try {
+                const res = await fetch(csvUrl);
+                const text = await res.text();
+                const lines = text.trim().split(/\r?\n/);
+                allData = lines.map(line => {
+                    const parts = line.split(/,(.*)/);
+                    return parts[1] ? parts[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : parts[0].replace(/"/g, '').trim();
+                }).filter(t => t.length > 1);
+            } catch (e) { console.error("データ取得エラー"); }
         }
-        type();
-    }
-
-    loadData();
-</script>
+        function startExperience() {
+            document.getElementById('startScreen').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('startScreen').style.display = 'none';
+                document.getElementById('mainContent').style.opacity = '1';
+            }, 1000);
+            audio.volume = 0.3;
+            audio.play();
+            showDaily();
+        }
+        function formatText(text) {
+            let formatted = text.replace(/([、。！？」])\s*/g, '$1<br>') 
+                                .replace(/(.{12,18}?[、。！？」])/g, '$1<br>');
+            return formatted.replace(/([一-龠]+)\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+        }
+        async function typeWriter(fullText) {
+            if (isTyping) return;
+            isTyping = true;
+            const target = document.getElementById('triviaText');
+            target.innerHTML = "";
+            const htmlContent = formatText(fullText);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            const nodes = Array.from(tempDiv.childNodes);
+            const speed = 4000 / Math.max(nodes.length, 10);
+            for (let node of nodes) {
+                if (node.nodeType === 3) {
+                    const chars = node.textContent.split("");
+                    for (let char of chars) {
+                        target.innerHTML += char;
+                        await new Promise(r => setTimeout(r, speed));
+                    }
+                } else {
+                    target.appendChild(node.cloneNode(true));
+                    await new Promise(r => setTimeout(r, speed * 2));
+                }
+            }
+            isTyping = false;
+        }
+        function showDaily() {
+            if (!allData.length) return;
+            const day = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+            typeWriter(allData[day % allData.length]);
+        }
+        function getRandomTrivia() {
+            if (isTyping) return;
+            typeWriter(allData[Math.floor(Math.random() * allData.length)]);
+        }
+        loadData();
+    </script>
 </body>
 </html>
