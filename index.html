@@ -41,6 +41,10 @@
             margin: 15px 0;
             line-height: 1.4;
             color: #2c3e50;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .btn {
             margin-top: 30px;
@@ -70,10 +74,8 @@
 </div>
 
 <script>
-    // ★スプレッドシートのURL（改行や空白を自動除去する処理を追加）
-    const rawUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv
-';
-    const csvUrl = rawUrl.replace(/\s+/g, ""); // 空白・改行を完全に排除
+    // ★URLを1行にまとめ、前後の空白を自動削除する処理
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv'.trim();
 
     let allData = [];
 
@@ -84,38 +86,30 @@
     async function loadData() {
         try {
             const response = await fetch(csvUrl);
-            if (!response.ok) throw new Error('スプレッドシートにアクセスできません。公開設定を確認してください。');
+            if (!response.ok) throw new Error('スプレッドシートにアクセスできません。');
             
             const csvText = await response.text();
             allData = parseCSV(csvText);
             
-            if (allData.length === 0) throw new Error('データが空、または正しく解析できません。');
+            if (allData.length === 0) throw new Error('データが解析できません。');
             
-            // 最初は「日替わり」で表示
             showDailyTrivia();
         } catch (e) {
             document.getElementById('triviaText').innerText = "読み込みエラー";
-            document.getElementById('errorMessage').innerHTML = e.message + "<br>※スプレッドシートの「ウェブに公開」が『CSV』になっているか再確認してください。";
+            document.getElementById('errorMessage').innerHTML = "スプレッドシートのURLまたは公開設定を確認してください。";
             console.error(e);
         }
     }
 
     function parseCSV(text) {
-        // 行ごとに分割
         const lines = text.trim().split(/\r?\n/);
         const result = [];
-
         for (let line of lines) {
-            // 最初のカンマの位置を探す
             const firstComma = line.indexOf(',');
             if (firstComma === -1) continue;
-
             const id = line.substring(0, firstComma).replace(/"/g, '').trim();
             const content = line.substring(firstComma + 1).replace(/^"|"$/g, '').replace(/""/g, '"').trim();
-            
-            if (content) {
-                result.push({ id: id, text: content });
-            }
+            if (content) result.push({ id: id, text: content });
         }
         return result;
     }
@@ -125,17 +119,13 @@
         const now = new Date();
         const start = new Date(now.getFullYear(), 0, 0);
         const diff = now - start;
-        const oneDay = 1000 * 60 * 60 * 24;
-        const dayOfYear = Math.floor(diff / oneDay);
-        
-        const index = dayOfYear % allData.length;
-        display(allData[index]);
+        const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+        display(allData[dayOfYear % allData.length]);
     }
 
     function getRandomTrivia() {
         if (allData.length === 0) return;
-        const index = Math.floor(Math.random() * allData.length);
-        display(allData[index]);
+        display(allData[Math.floor(Math.random() * allData.length)]);
     }
 
     function display(item) {
