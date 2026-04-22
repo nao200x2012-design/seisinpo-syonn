@@ -81,16 +81,21 @@
         <button class="sub-btn" onclick="getRandomTrivia()">他の言葉を仰ぐ</button>
     </div>
     
-    <audio id="bgm" loop></audio>
+    <audio id="bgm" loop preload="auto">
+        <source id="audioSource" type="audio/mpeg">
+    </audio>
 
     <script>
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + new Date().getTime();
         let allData = [];
         let isTyping = false;
         const audio = document.getElementById('bgm');
+        const source = document.getElementById('audioSource');
 
-        // ★音楽ファイルを強制的に最新状態で読み込む
-        audio.src = 'bgm.mp3?v=' + new Date().getTime();
+        // 音楽ファイルの絶対パス
+        const musicUrl = 'https://nao200x2012-design.github.io/seisinpo-syonn/bgm.mp3';
+        source.src = musicUrl + '?v=' + new Date().getTime();
+        audio.load();
 
         async function loadData() {
             try {
@@ -112,10 +117,8 @@
             }, 1000);
             
             audio.volume = 0.3;
-            // 再生に失敗した場合にエラーを表示
             audio.play().catch(e => {
-                console.error("音楽再生に失敗しました:", e);
-                alert("音楽の再生に失敗しました。ファイルが bgm.mp3 という名前で保存されているか確認してください。");
+                console.error("再生失敗:", e);
             });
             showDaily();
         }
@@ -135,7 +138,11 @@
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlContent;
             const nodes = Array.from(tempDiv.childNodes);
-            const speed = 4000 / Math.max(nodes.length, 10);
+            
+            // 全体で「約3秒」になるよう計算（3000ms / ノード数）
+            // 極端に短い場合に速すぎないよう、最低50msの待機を設ける
+            const speed = Math.max(50, 3000 / Math.max(nodes.length * 2, 10));
+
             for (let node of nodes) {
                 if (node.nodeType === 3) {
                     const chars = node.textContent.split("");
@@ -145,7 +152,7 @@
                     }
                 } else {
                     target.appendChild(node.cloneNode(true));
-                    await new Promise(r => setTimeout(r, speed * 2));
+                    await new Promise(r => setTimeout(r, speed));
                 }
             }
             isTyping = false;
