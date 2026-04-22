@@ -92,7 +92,6 @@
         const audio = document.getElementById('bgm');
         const source = document.getElementById('audioSource');
 
-        // 音楽ファイルの絶対パス
         const musicUrl = 'https://nao200x2012-design.github.io/seisinpo-syonn/bgm.mp3';
         source.src = musicUrl + '?v=' + new Date().getTime();
         audio.load();
@@ -117,9 +116,13 @@
             }, 1000);
             
             audio.volume = 0.3;
-            audio.play().catch(e => {
-                console.error("再生失敗:", e);
-            });
+            // ボタンクリックの瞬間に強制再生
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.error("再生エラー:", error);
+                });
+            }
             showDaily();
         }
 
@@ -139,9 +142,8 @@
             tempDiv.innerHTML = htmlContent;
             const nodes = Array.from(tempDiv.childNodes);
             
-            // 全体で「約3秒」になるよう計算（3000ms / ノード数）
-            // 極端に短い場合に速すぎないよう、最低50msの待機を設ける
-            const speed = Math.max(50, 3000 / Math.max(nodes.length * 2, 10));
+            // 全体で「約2秒（2000ms）」になるよう計算
+            const speed = Math.max(30, 2000 / Math.max(nodes.length * 2, 10));
 
             for (let node of nodes) {
                 if (node.nodeType === 3) {
