@@ -15,6 +15,7 @@
             min-height: 100vh;
             margin: 0;
             overflow: hidden;
+            transition: background-color 0.6s ease;
         }
 
         #startScreen {
@@ -37,7 +38,7 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             text-align: center;
             opacity: 0;
-            transition: opacity 2s ease;
+            transition: opacity 2s ease, box-shadow 0.6s ease, transform 0.6s ease;
         }
 
         h1 {
@@ -111,18 +112,25 @@
     <source src="https://nao200x2012-design.github.io/seisinpo-syonn/bgm_final.mp3" type="audio/mpeg">
 </audio>
 
+<audio id="drinkSe" preload="auto">
+    <source src="https://nao200x2012-design.github.io/seisinpo-syonn/drink.mp3" type="audio/mpeg">
+</audio>
+
 <script>
 const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + Date.now();
 
 let allData = [];
 let isTyping = false;
+let hasStarted = false;
 
 const startScreen = document.getElementById('startScreen');
 const mainContent = document.getElementById('mainContent');
 const triviaText = document.getElementById('triviaText');
 const audio = document.getElementById('bgm');
+const drinkSe = document.getElementById('drinkSe');
 
 audio.volume = 0.3;
+drinkSe.volume = 0.8;
 
 async function loadData() {
     try {
@@ -181,20 +189,58 @@ function showDaily() {
     typeWriter(allData[i]);
 }
 
-function getRandomTrivia() {
-    if (isTyping) return;
-    showDaily();
+function flashPotionEffect() {
+    document.body.style.backgroundColor = '#e6f7ff';
+    mainContent.style.boxShadow = '0 0 30px rgba(120, 190, 255, 0.35)';
+    mainContent.style.transform = 'scale(1.01)';
+
+    setTimeout(() => {
+        document.body.style.backgroundColor = '#f0f2f5';
+        mainContent.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+        mainContent.style.transform = 'scale(1)';
+    }, 600);
 }
 
-async function startExperience() {
+async function playDrinkSe() {
     try {
+        drinkSe.pause();
+        drinkSe.currentTime = 0;
+        await drinkSe.play();
+    } catch (e) {
+        console.error('効果音再生失敗', e);
+    }
+}
+
+async function startBgmWithFade() {
+    try {
+        audio.pause();
         audio.currentTime = 0;
+        audio.volume = 0;
         await audio.play();
-        console.log('BGM再生成功');
+
+        let vol = 0;
+        const fade = setInterval(() => {
+            vol += 0.02;
+            if (vol >= 0.3) {
+                vol = 0.3;
+                clearInterval(fade);
+            }
+            audio.volume = vol;
+        }, 100);
+
     } catch (e) {
         console.error('BGM再生失敗', e);
         alert('BGM再生失敗: ' + e.name + ' / ' + e.message);
     }
+}
+
+async function startExperience() {
+    if (hasStarted) return;
+    hasStarted = true;
+
+    flashPotionEffect();
+    await playDrinkSe();
+    await startBgmWithFade();
 
     startScreen.style.opacity = '0';
     setTimeout(() => {
@@ -202,6 +248,14 @@ async function startExperience() {
         mainContent.style.opacity = '1';
     }, 1000);
 
+    showDaily();
+}
+
+async function getRandomTrivia() {
+    if (isTyping) return;
+
+    flashPotionEffect();
+    await playDrinkSe();
     showDaily();
 }
 
