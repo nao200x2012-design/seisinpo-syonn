@@ -44,6 +44,8 @@
             font-size: 1.6rem;
             line-height: 2.4;
             min-height: 200px;
+            color: #1a1a1a;
+            margin: 0;
         }
 
         ruby rt {
@@ -58,6 +60,7 @@
             padding: 15px 35px;
             font-size: 1rem;
             cursor: pointer;
+            border-radius: 2px;
         }
 
         .sub-btn {
@@ -67,19 +70,40 @@
             color: #888;
             cursor: pointer;
             text-decoration: underline;
+            font-size: 0.9rem;
+        }
+
+        .sub-btn:hover {
+            color: #333;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 88%;
+                padding: 40px 20px;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+                line-height: 2.2;
+                min-height: 180px;
+            }
+
+            .btn {
+                font-size: 1rem;
+                padding: 14px 28px;
+            }
         }
     </style>
 </head>
 <body>
 
 <div id="startScreen">
-    <!-- ①ここ変更 -->
     <button class="btn" onclick="startExperience()">精神ポーションを飲む</button>
 </div>
 
 <div class="container" id="mainContent">
     <h1 id="triviaText"></h1>
-    <!-- ②ここ変更 -->
     <button class="sub-btn" onclick="getRandomTrivia()">もう一口飲む</button>
 </div>
 
@@ -111,6 +135,7 @@ async function loadData() {
 
     } catch (e) {
         console.error('データ取得エラー:', e);
+        triviaText.innerHTML = '言葉の読み込みに失敗しました。';
     }
 }
 
@@ -129,12 +154,11 @@ async function typeWriter(text) {
     const html = formatText(text);
     const temp = document.createElement('div');
     temp.innerHTML = html;
-
     const nodes = Array.from(temp.childNodes);
 
-    for (let node of nodes) {
+    for (const node of nodes) {
         if (node.nodeType === 3) {
-            for (let c of node.textContent) {
+            for (const c of node.textContent) {
                 triviaText.innerHTML += c;
                 await new Promise(r => setTimeout(r, 30));
             }
@@ -158,25 +182,25 @@ function getRandomTrivia() {
 }
 
 async function startExperience() {
+    try {
+        audio = new Audio();
+        audio.src = musicUrl + '?v=' + Date.now();
+        audio.loop = true;
+        audio.volume = 0.3;
+        audio.preload = 'auto';
+
+        await audio.play();
+        console.log('BGM再生成功');
+    } catch (e) {
+        console.error('BGM再生失敗', e);
+        alert('BGM再生失敗: ' + e.name + ' / ' + e.message);
+    }
 
     startScreen.style.opacity = '0';
     setTimeout(() => {
         startScreen.style.display = 'none';
         mainContent.style.opacity = '1';
     }, 1000);
-
-    try {
-        audio = new Audio();
-        audio.src = musicUrl + '?v=' + Date.now();
-        audio.loop = true;
-        audio.volume = 0.3;
-
-        await audio.play();
-        console.log("BGM再生成功");
-
-    } catch (e) {
-        console.error("BGM再生失敗", e);
-    }
 
     showDaily();
 }
