@@ -122,6 +122,7 @@ const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJs
 let allData = [];
 let isTyping = false;
 let hasStarted = false;
+let dataLoaded = false;
 
 const startScreen = document.getElementById('startScreen');
 const mainContent = document.getElementById('mainContent');
@@ -131,6 +132,20 @@ const drinkSe = document.getElementById('drinkSe');
 
 bgm.volume = 0.25;
 drinkSe.volume = 1.0;
+
+const potionColors = [
+    { bg: '#e6f7ff', glow: 'rgba(120, 190, 255, 0.35)' },
+    { bg: '#ffe6f2', glow: 'rgba(255, 140, 190, 0.35)' },
+    { bg: '#fff4cc', glow: 'rgba(255, 210, 90, 0.35)' },
+    { bg: '#e8ffd9', glow: 'rgba(140, 220, 120, 0.35)' },
+    { bg: '#f0e6ff', glow: 'rgba(180, 120, 255, 0.35)' },
+    { bg: '#ffe9d6', glow: 'rgba(255, 160, 100, 0.35)' },
+    { bg: '#e6fff9', glow: 'rgba(120, 230, 210, 0.35)' }
+];
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function loadData() {
     try {
@@ -145,11 +160,14 @@ async function loadData() {
                 : parts[0].replace(/"/g, '').trim();
         }).filter(t => t.length > 1);
 
+        dataLoaded = true;
     } catch (e) {
         console.error('データ取得エラー:', e);
         triviaText.innerHTML = '言葉の読み込みに失敗しました。';
     }
 }
+
+const dataPromise = loadData();
 
 function formatText(text) {
     return text
@@ -172,7 +190,7 @@ async function typeWriter(text) {
         if (node.nodeType === 3) {
             for (const c of node.textContent) {
                 triviaText.innerHTML += c;
-                await new Promise(r => setTimeout(r, 30));
+                await sleep(30);
             }
         } else {
             triviaText.appendChild(node.cloneNode(true));
@@ -183,20 +201,13 @@ async function typeWriter(text) {
 }
 
 function showDaily() {
-    if (!allData.length) return;
+    if (!allData.length) {
+        triviaText.innerHTML = '言葉を準備中です…';
+        return;
+    }
     const i = Math.floor(Math.random() * allData.length);
     typeWriter(allData[i]);
 }
-
-const potionColors = [
-    { bg: '#e6f7ff', glow: 'rgba(120, 190, 255, 0.35)' },
-    { bg: '#ffe6f2', glow: 'rgba(255, 140, 190, 0.35)' },
-    { bg: '#fff4cc', glow: 'rgba(255, 210, 90, 0.35)' },
-    { bg: '#e8ffd9', glow: 'rgba(140, 220, 120, 0.35)' },
-    { bg: '#f0e6ff', glow: 'rgba(180, 120, 255, 0.35)' },
-    { bg: '#ffe9d6', glow: 'rgba(255, 160, 100, 0.35)' },
-    { bg: '#e6fff9', glow: 'rgba(120, 230, 210, 0.35)' }
-];
 
 function flashPotionEffect() {
     const color = potionColors[Math.floor(Math.random() * potionColors.length)];
@@ -211,79 +222,80 @@ function flashPotionEffect() {
     }, 1800);
 }
 
-function fadeInBgm() {
-    bgm.volume = 0.0;
-
-    const p = bgm.play();
-    if (p && typeof p.catch === 'function') {
-        p.catch(e => {
-            console.error('BGM再生失敗', e);
-        });
-    }
-
-    let vol = 0.0;
-    const timer = setInterval(() => {
-        vol += 0.02;
-        if (vol >= 0.25) {
-            vol = 0.25;
-            clearInterval(timer);
-        }
-        bgm.volume = vol;
-    }, 120);
-}
-
-async function playDrinkOnly() {
+function playDrinkSe() {
     try {
         drinkSe.pause();
         drinkSe.currentTime = 0;
-        await drinkSe.play();
-        return true;
+        const p = drinkSe.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(e => console.error('飲む音再生失敗', e));
+        }
     } catch (e) {
         console.error('飲む音再生失敗', e);
-        return false;
     }
 }
 
-function startScreenHide() {
-    startScreen.style.opacity = '0';
-    setTimeout(() => {
-        startScreen.style.display = 'none';
-        mainContent.style.opacity = '1';
-    }, 1000);
+function startBgm() {
+    try {
+        bgm.pause();
+        bgm.currentTime = 0;
+        bgm.volume = 0.0;
+
+        const p = bgm.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(e => console.error('BGM再生失敗', e));
+        }
+
+        let vol = 0.0;
+        const timer = setInterval(() => {
+            vol += 0.02;
+            if (vol >= 0.25) {
+                vol = 0.25;
+                clearInterval(timer);
+            }
+            bgm.volume = vol;
+        }, 120);
+    } catch (e) {
+        console.error('BGM再生失敗', e);
+    }
 }
 
 async function startExperience() {
     if (hasStarted) return;
     hasStarted = true;
 
-    flashPotionEffect();
-    startScreenHide();
+    // まずデータ読み込みを待つ
+    await dataPromise;
 
-    const drinkOk = await playDrinkOnly();
+    // 最初の表示は必ず出す
     showDaily();
 
-    if (drinkOk) {
-        const duration = isFinite(drinkSe.duration) && drinkSe.duration > 0
-            ? drinkSe.duration * 1000
-            : 1200;
+    // 演出
+    flashPotionEffect();
 
-        setTimeout(() => {
-            fadeInBgm();
-        }, duration + 150);
-    } else {
-        fadeInBgm();
-    }
+    // 飲む音を最優先
+    playDrinkSe();
+
+    // 画面を開く
+    startScreen.style.opacity = '0';
+    setTimeout(() => {
+        startScreen.style.display = 'none';
+        mainContent.style.opacity = '1';
+    }, 1000);
+
+    // 飲む音のあとにBGM開始
+    setTimeout(() => {
+        startBgm();
+    }, 1200);
 }
 
-async function getRandomTrivia() {
+function getRandomTrivia() {
     if (isTyping) return;
 
     flashPotionEffect();
-    playDrinkOnly();
+    playDrinkSe();
     showDaily();
 }
-
-loadData();
 </script>
 
 </body>
