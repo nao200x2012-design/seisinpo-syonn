@@ -107,17 +107,22 @@
     <button class="sub-btn" onclick="getRandomTrivia()">もう一口飲む</button>
 </div>
 
+<audio id="bgm" loop preload="auto">
+    <source src="https://nao200x2012-design.github.io/seisinpo-syonn/bgm_final.mp3" type="audio/mpeg">
+</audio>
+
 <script>
 const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + Date.now();
-const musicUrl = 'https://nao200x2012-design.github.io/seisinpo-syonn/bgm_final.mp3';
 
 let allData = [];
 let isTyping = false;
-let audio = null;
 
 const startScreen = document.getElementById('startScreen');
 const mainContent = document.getElementById('mainContent');
 const triviaText = document.getElementById('triviaText');
+const audio = document.getElementById('bgm');
+
+audio.volume = 0.3;
 
 async function loadData() {
     try {
@@ -183,12 +188,7 @@ function getRandomTrivia() {
 
 async function startExperience() {
     try {
-        audio = new Audio();
-        audio.src = musicUrl + '?v=' + Date.now();
-        audio.loop = true;
-        audio.volume = 0.3;
-        audio.preload = 'auto';
-
+        audio.currentTime = 0;
         await audio.play();
         console.log('BGM再生成功');
     } catch (e) {
