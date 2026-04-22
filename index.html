@@ -73,18 +73,18 @@
 <body>
 
 <div id="startScreen">
-    <button class="btn" onclick="startExperience()">精神ポーションを仰ぐ</button>
+    <!-- ①ここ変更 -->
+    <button class="btn" onclick="startExperience()">精神ポーションを飲む</button>
 </div>
 
 <div class="container" id="mainContent">
     <h1 id="triviaText"></h1>
-    <button class="sub-btn" onclick="getRandomTrivia()">他の言葉を仰ぐ</button>
+    <!-- ②ここ変更 -->
+    <button class="sub-btn" onclick="getRandomTrivia()">もう一口飲む</button>
 </div>
 
 <script>
 const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + Date.now();
-
-// 👇 bgm.mp3のまま使用
 const musicUrl = 'https://nao200x2012-design.github.io/seisinpo-syonn/bgm.mp3';
 
 let allData = [];
@@ -157,7 +157,6 @@ function getRandomTrivia() {
     showDaily();
 }
 
-// 🔥 ここが超重要
 async function startExperience() {
 
     startScreen.style.opacity = '0';
@@ -168,16 +167,11 @@ async function startExperience() {
 
     try {
         audio = new Audio();
-
-        // キャッシュ回避
         audio.src = musicUrl + '?v=' + Date.now();
-
         audio.loop = true;
         audio.volume = 0.3;
 
-        // 強制的に再生
         await audio.play();
-
         console.log("BGM再生成功");
 
     } catch (e) {
