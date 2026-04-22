@@ -136,7 +136,6 @@ async function loadData() {
     try {
         const res = await fetch(csvUrl, { cache: 'no-store' });
         const text = await res.text();
-
         const lines = text.trim().split(/\r?\n/);
 
         allData = lines.map(line => {
@@ -190,13 +189,13 @@ function showDaily() {
 }
 
 const potionColors = [
-    { bg: '#e6f7ff', glow: 'rgba(120, 190, 255, 0.35)' }, // 青
-    { bg: '#ffe6f2', glow: 'rgba(255, 140, 190, 0.35)' }, // 桃
-    { bg: '#fff4cc', glow: 'rgba(255, 210, 90, 0.35)' },  // 黄
-    { bg: '#e8ffd9', glow: 'rgba(140, 220, 120, 0.35)' }, // 緑
-    { bg: '#f0e6ff', glow: 'rgba(180, 120, 255, 0.35)' }, // 紫
-    { bg: '#ffe9d6', glow: 'rgba(255, 160, 100, 0.35)' }, // 橙
-    { bg: '#e6fff9', glow: 'rgba(120, 230, 210, 0.35)' }  // 水色
+    { bg: '#e6f7ff', glow: 'rgba(120, 190, 255, 0.35)' },
+    { bg: '#ffe6f2', glow: 'rgba(255, 140, 190, 0.35)' },
+    { bg: '#fff4cc', glow: 'rgba(255, 210, 90, 0.35)' },
+    { bg: '#e8ffd9', glow: 'rgba(140, 220, 120, 0.35)' },
+    { bg: '#f0e6ff', glow: 'rgba(180, 120, 255, 0.35)' },
+    { bg: '#ffe9d6', glow: 'rgba(255, 160, 100, 0.35)' },
+    { bg: '#e6fff9', glow: 'rgba(120, 230, 210, 0.35)' }
 ];
 
 function flashPotionEffect() {
@@ -240,18 +239,26 @@ async function startBgmWithFade() {
             audio.volume = vol;
         }, 100);
 
+        return true;
     } catch (e) {
         console.error('BGM再生失敗', e);
+        alert('BGM再生失敗: ' + e.name + ' / ' + e.message);
+        return false;
     }
 }
 
 async function startExperience() {
     if (hasStarted) return;
+
+    // iPhone向けに、最初のタップではBGMを最優先
+    const bgmStarted = await startBgmWithFade();
+    if (!bgmStarted) return;
+
     hasStarted = true;
 
+    // 効果音は失敗しても止めない
+    playDrinkSe();
     flashPotionEffect();
-    await playDrinkSe();
-    await startBgmWithFade();
 
     startScreen.style.opacity = '0';
     setTimeout(() => {
@@ -266,7 +273,7 @@ async function getRandomTrivia() {
     if (isTyping) return;
 
     flashPotionEffect();
-    await playDrinkSe();
+    playDrinkSe();
     showDaily();
 }
 
