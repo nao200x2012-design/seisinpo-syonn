@@ -16,9 +16,13 @@
             margin: 0;
             overflow: hidden;
         }
+
         #startScreen {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: #f0f2f5;
             display: flex;
             justify-content: center;
@@ -26,6 +30,7 @@
             z-index: 100;
             transition: opacity 1s ease;
         }
+
         .container {
             width: 85%;
             max-width: 500px;
@@ -37,6 +42,7 @@
             opacity: 0;
             transition: opacity 2s ease;
         }
+
         h1 {
             font-size: 1.8rem;
             margin: 0;
@@ -47,8 +53,14 @@
             align-items: center;
             justify-content: center;
             flex-direction: column;
+            word-break: break-word;
         }
-        ruby rt { font-size: 0.8rem; color: #666; }
+
+        ruby rt {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
         .btn {
             background-color: #333;
             color: #fff;
@@ -60,7 +72,12 @@
             border-radius: 2px;
             transition: 0.5s;
         }
-        .btn:hover { background-color: #000; letter-spacing: 0.4rem; }
+
+        .btn:hover {
+            background-color: #000;
+            letter-spacing: 0.4rem;
+        }
+
         .sub-btn {
             margin-top: 50px;
             background: none;
@@ -70,105 +87,159 @@
             font-size: 0.8rem;
             text-decoration: underline;
         }
+
+        .sub-btn:hover {
+            color: #333;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 88%;
+                padding: 40px 20px;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+                line-height: 2.2;
+                min-height: 180px;
+            }
+
+            .btn {
+                font-size: 1rem;
+                padding: 14px 28px;
+            }
+
+            .sub-btn {
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="startScreen">
         <button class="btn" onclick="startExperience()">精神ポーションを仰ぐ</button>
     </div>
+
     <div class="container" id="mainContent">
         <h1 id="triviaText"></h1>
         <button class="sub-btn" onclick="getRandomTrivia()">他の言葉を仰ぐ</button>
     </div>
-    
-    <audio id="bgm" loop preload="auto">
-        <source id="audioSource" type="audio/mpeg">
-    </audio>
+
+    <audio id="bgm" loop preload="none"></audio>
 
     <script>
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + new Date().getTime();
+        const musicUrl = 'https://nao200x2012-design.github.io/seisinpo-syonn/bgm.mp3';
+
         let allData = [];
         let isTyping = false;
-        const audio = document.getElementById('bgm');
-        const source = document.getElementById('audioSource');
 
-        const musicUrl = 'https://nao200x2012-design.github.io/seisinpo-syonn/bgm.mp3';
-        source.src = musicUrl + '?v=' + new Date().getTime();
-        audio.load();
+        const audio = document.getElementById('bgm');
+        const startScreen = document.getElementById('startScreen');
+        const mainContent = document.getElementById('mainContent');
+        const triviaText = document.getElementById('triviaText');
 
         async function loadData() {
             try {
-                const res = await fetch(csvUrl);
+                const res = await fetch(csvUrl, { cache: 'no-store' });
                 const text = await res.text();
+
                 const lines = text.trim().split(/\r?\n/);
+
                 allData = lines.map(line => {
                     const parts = line.split(/,(.*)/);
-                    return parts[1] ? parts[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim() : parts[0].replace(/"/g, '').trim();
+                    return parts[1]
+                        ? parts[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim()
+                        : parts[0].replace(/"/g, '').trim();
                 }).filter(t => t.length > 1);
-            } catch (e) { console.error("データ取得エラー"); }
-        }
 
-        function startExperience() {
-            document.getElementById('startScreen').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('startScreen').style.display = 'none';
-                document.getElementById('mainContent').style.opacity = '1';
-            }, 1000);
-            
-            audio.volume = 0.3;
-            // ボタンクリックの瞬間に強制再生
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.error("再生エラー:", error);
-                });
+            } catch (e) {
+                console.error('データ取得エラー:', e);
+                triviaText.innerHTML = '言葉の読み込みに失敗しました。<br>少し時間をおいてもう一度お試しください。';
             }
-            showDaily();
         }
 
         function formatText(text) {
-            let formatted = text.replace(/([、。！？」])\s*/g, '$1<br>') 
-                                .replace(/(.{12,18}?[、。！？」])/g, '$1<br>');
-            return formatted.replace(/([一-龠]+)\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+            let formatted = text
+                .replace(/([、。！？」])/g, '$1<br>')
+                .replace(/(.{12,18}?[、。！？」])/g, '$1<br>');
+
+            formatted = formatted.replace(/([一-龠々]+)\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+
+            return formatted;
         }
 
         async function typeWriter(fullText) {
             if (isTyping) return;
             isTyping = true;
-            const target = document.getElementById('triviaText');
-            target.innerHTML = "";
+
+            triviaText.innerHTML = '';
+
             const htmlContent = formatText(fullText);
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlContent;
             const nodes = Array.from(tempDiv.childNodes);
-            
-            // 全体で「約2秒（2000ms）」になるよう計算
+
             const speed = Math.max(30, 2000 / Math.max(nodes.length * 2, 10));
 
-            for (let node of nodes) {
+            for (const node of nodes) {
                 if (node.nodeType === 3) {
-                    const chars = node.textContent.split("");
-                    for (let char of chars) {
-                        target.innerHTML += char;
-                        await new Promise(r => setTimeout(r, speed));
+                    const chars = node.textContent.split('');
+                    for (const char of chars) {
+                        triviaText.innerHTML += char;
+                        await new Promise(resolve => setTimeout(resolve, speed));
                     }
                 } else {
-                    target.appendChild(node.cloneNode(true));
-                    await new Promise(r => setTimeout(r, speed));
+                    triviaText.appendChild(node.cloneNode(true));
+                    await new Promise(resolve => setTimeout(resolve, speed));
                 }
             }
+
             isTyping = false;
         }
 
         function showDaily() {
-            if (!allData.length) return;
-            const day = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+            if (!allData.length) {
+                triviaText.innerHTML = '表示する言葉がありません。';
+                return;
+            }
+
+            const now = new Date();
+            const startOfYear = new Date(now.getFullYear(), 0, 0);
+            const day = Math.floor((now - startOfYear) / 86400000);
+
             typeWriter(allData[day % allData.length]);
         }
 
         function getRandomTrivia() {
-            if (isTyping) return;
-            typeWriter(allData[Math.floor(Math.random() * allData.length)]);
+            if (isTyping || !allData.length) return;
+
+            const randomText = allData[Math.floor(Math.random() * allData.length)];
+            typeWriter(randomText);
+        }
+
+        async function startExperience() {
+            startScreen.style.opacity = '0';
+
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                mainContent.style.opacity = '1';
+            }, 1000);
+
+            try {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.src = musicUrl + '?v=' + new Date().getTime();
+                audio.volume = 0.3;
+                audio.muted = false;
+
+                await audio.play();
+                console.log('BGM再生成功');
+            } catch (error) {
+                console.error('再生エラー:', error);
+            }
+
+            showDaily();
         }
 
         loadData();
