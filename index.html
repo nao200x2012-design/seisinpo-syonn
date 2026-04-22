@@ -113,7 +113,7 @@
 </audio>
 
 <audio id="drinkSe" preload="auto" playsinline webkit-playsinline>
-    <source src="https://nao200x2012-design.github.io/seisinpo-syonn/gulp_down_water1.mp3" type="audio/mpeg">
+    <source src="https://nao200x2012-design.github.io/seisinpo-syonn/drink.mp3" type="audio/mpeg">
 </audio>
 
 <script>
@@ -122,16 +122,15 @@ const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJs
 let allData = [];
 let isTyping = false;
 let hasStarted = false;
-let dataLoaded = false;
 
 const startScreen = document.getElementById('startScreen');
 const mainContent = document.getElementById('mainContent');
 const triviaText = document.getElementById('triviaText');
-const bgm = document.getElementById('bgm');
+const audio = document.getElementById('bgm');
 const drinkSe = document.getElementById('drinkSe');
 
-bgm.volume = 0.25;
-drinkSe.volume = 1.0;
+audio.volume = 0.3;
+drinkSe.volume = 0.8;
 
 const potionColors = [
     { bg: '#e6f7ff', glow: 'rgba(120, 190, 255, 0.35)' },
@@ -143,14 +142,11 @@ const potionColors = [
     { bg: '#e6fff9', glow: 'rgba(120, 230, 210, 0.35)' }
 ];
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function loadData() {
     try {
         const res = await fetch(csvUrl, { cache: 'no-store' });
         const text = await res.text();
+
         const lines = text.trim().split(/\r?\n/);
 
         allData = lines.map(line => {
@@ -160,14 +156,11 @@ async function loadData() {
                 : parts[0].replace(/"/g, '').trim();
         }).filter(t => t.length > 1);
 
-        dataLoaded = true;
     } catch (e) {
         console.error('データ取得エラー:', e);
         triviaText.innerHTML = '言葉の読み込みに失敗しました。';
     }
 }
-
-const dataPromise = loadData();
 
 function formatText(text) {
     return text
@@ -190,7 +183,7 @@ async function typeWriter(text) {
         if (node.nodeType === 3) {
             for (const c of node.textContent) {
                 triviaText.innerHTML += c;
-                await sleep(30);
+                await new Promise(r => setTimeout(r, 30));
             }
         } else {
             triviaText.appendChild(node.cloneNode(true));
@@ -201,16 +194,14 @@ async function typeWriter(text) {
 }
 
 function showDaily() {
-    if (!allData.length) {
-        triviaText.innerHTML = '言葉を準備中です…';
-        return;
-    }
+    if (!allData.length) return;
     const i = Math.floor(Math.random() * allData.length);
     typeWriter(allData[i]);
 }
 
 function flashPotionEffect() {
     const color = potionColors[Math.floor(Math.random() * potionColors.length)];
+
     document.body.style.backgroundColor = color.bg;
     mainContent.style.boxShadow = '0 0 34px ' + color.glow;
     mainContent.style.transform = 'scale(1.02)';
@@ -222,39 +213,33 @@ function flashPotionEffect() {
     }, 1800);
 }
 
-function playDrinkSe() {
+async function playDrinkSe() {
     try {
         drinkSe.pause();
         drinkSe.currentTime = 0;
-        const p = drinkSe.play();
-        if (p && typeof p.catch === 'function') {
-            p.catch(e => console.error('飲む音再生失敗', e));
-        }
+        await drinkSe.play();
     } catch (e) {
-        console.error('飲む音再生失敗', e);
+        console.error('効果音再生失敗', e);
     }
 }
 
-function startBgm() {
+async function startBgmWithFade() {
     try {
-        bgm.pause();
-        bgm.currentTime = 0;
-        bgm.volume = 0.0;
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = 0;
+        await audio.play();
 
-        const p = bgm.play();
-        if (p && typeof p.catch === 'function') {
-            p.catch(e => console.error('BGM再生失敗', e));
-        }
-
-        let vol = 0.0;
-        const timer = setInterval(() => {
+        let vol = 0;
+        const fade = setInterval(() => {
             vol += 0.02;
-            if (vol >= 0.25) {
-                vol = 0.25;
-                clearInterval(timer);
+            if (vol >= 0.3) {
+                vol = 0.3;
+                clearInterval(fade);
             }
-            bgm.volume = vol;
-        }, 120);
+            audio.volume = vol;
+        }, 100);
+
     } catch (e) {
         console.error('BGM再生失敗', e);
     }
@@ -264,38 +249,28 @@ async function startExperience() {
     if (hasStarted) return;
     hasStarted = true;
 
-    // まずデータ読み込みを待つ
-    await dataPromise;
-
-    // 最初の表示は必ず出す
-    showDaily();
-
-    // 演出
     flashPotionEffect();
+    await playDrinkSe();
+    await startBgmWithFade();
 
-    // 飲む音を最優先
-    playDrinkSe();
-
-    // 画面を開く
     startScreen.style.opacity = '0';
     setTimeout(() => {
         startScreen.style.display = 'none';
         mainContent.style.opacity = '1';
     }, 1000);
 
-    // 飲む音のあとにBGM開始
-    setTimeout(() => {
-        startBgm();
-    }, 1200);
+    showDaily();
 }
 
-function getRandomTrivia() {
+async function getRandomTrivia() {
     if (isTyping) return;
 
     flashPotionEffect();
-    playDrinkSe();
+    await playDrinkSe();
     showDaily();
 }
+
+loadData();
 </script>
 
 </body>
