@@ -1,109 +1,289 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>精神ポーション</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精神ポーション</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sawarabi+Mincho&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sawarabi Mincho', serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 1.8s ease;
+        }
 
-<style>
-body {
-    font-family: sans-serif;
-    background-color: #f0f2f5;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-    margin:0;
-    transition: background-color 1.8s ease;
-}
+        #startScreen {
+            position: fixed;
+            inset: 0;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 1s ease;
+        }
 
-#startScreen {
-    position:fixed;
-    inset:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:#f0f2f5;
-}
+        .container {
+            width: 85%;
+            max-width: 500px;
+            background: #fff;
+            padding: 60px 40px;
+            border-radius: 2px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            text-align: center;
+            opacity: 0;
+            transition: opacity 2s ease, box-shadow 1.2s ease, transform 1.2s ease;
+        }
 
-.container {
-    opacity:0;
-    transition:2s;
-}
-</style>
+        h1 {
+            font-size: 1.6rem;
+            line-height: 2.4;
+            min-height: 200px;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        ruby rt {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .btn {
+            background-color: #333;
+            color: #fff;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1rem;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+
+        .sub-btn {
+            margin-top: 40px;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            text-decoration: underline;
+            font-size: 0.9rem;
+        }
+
+        .sub-btn:hover {
+            color: #333;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 88%;
+                padding: 40px 20px;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+                line-height: 2.2;
+                min-height: 180px;
+            }
+
+            .btn {
+                font-size: 1rem;
+                padding: 14px 28px;
+            }
+        }
+    </style>
 </head>
-
 <body>
 
 <div id="startScreen">
-<button onclick="startExperience()">精神ポーションを飲む</button>
+    <button class="btn" onclick="startExperience()">精神ポーションを飲む</button>
 </div>
 
 <div class="container" id="mainContent">
-<h1 id="text"></h1>
-<button onclick="next()">もう一口飲む</button>
+    <h1 id="triviaText"></h1>
+    <button class="sub-btn" onclick="getRandomTrivia()">もう一口飲む</button>
 </div>
 
-<audio id="bgm" loop>
-<source src="https://nao200x2012-design.github.io/seisinpo-syonn/bgm_final.mp3">
+<audio id="bgm" loop preload="auto" playsinline webkit-playsinline>
+    <source src="https://nao200x2012-design.github.io/seisinpo-syonn/bgm_final.mp3" type="audio/mpeg">
 </audio>
 
-<audio id="drink">
-<source src="https://nao200x2012-design.github.io/seisinpo-syonn/gulp_down_water1.mp3">
+<audio id="drinkSe" preload="auto" playsinline webkit-playsinline>
+    <source src="https://nao200x2012-design.github.io/seisinpo-syonn/gulp_down_water1.mp3" type="audio/mpeg">
 </audio>
 
 <script>
+const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJsvGxJQQVs9gT9yGWQYV77rbCPiIG2cPyo6LSkmd-DcPSAZSbAhq0Z6LBj1iTkdhm/pub?output=csv&t=' + Date.now();
 
-const bgm = document.getElementById("bgm");
-const drink = document.getElementById("drink");
-const screen = document.getElementById("startScreen");
-const main = document.getElementById("mainContent");
+let allData = [];
+let isTyping = false;
+let hasStarted = false;
+
+const startScreen = document.getElementById('startScreen');
+const mainContent = document.getElementById('mainContent');
+const triviaText = document.getElementById('triviaText');
+const bgm = document.getElementById('bgm');
+const drinkSe = document.getElementById('drinkSe');
 
 bgm.volume = 0.25;
-drink.volume = 1.0;
+drinkSe.volume = 1.0;
 
-function flash(){
-    const colors = ["#e6f7ff","#ffe6f2","#fff4cc","#e8ffd9","#f0e6ff","#ffe9d6","#e6fff9"];
-    const c = colors[Math.floor(Math.random()*colors.length)];
+async function loadData() {
+    try {
+        const res = await fetch(csvUrl, { cache: 'no-store' });
+        const text = await res.text();
+        const lines = text.trim().split(/\r?\n/);
 
-    document.body.style.backgroundColor = c;
+        allData = lines.map(line => {
+            const parts = line.split(/,(.*)/);
+            return parts[1]
+                ? parts[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim()
+                : parts[0].replace(/"/g, '').trim();
+        }).filter(t => t.length > 1);
 
-    setTimeout(()=>{
-        document.body.style.backgroundColor = "#f0f2f5";
-    },1800);
+    } catch (e) {
+        console.error('データ取得エラー:', e);
+        triviaText.innerHTML = '言葉の読み込みに失敗しました。';
+    }
 }
 
-async function startExperience(){
-
-    // 🔥 iPhone対策：BGMを一瞬だけ解放
-    try{
-        await bgm.play();
-        bgm.pause();
-        bgm.currentTime = 0;
-    }catch(e){}
-
-    // 🔥 飲む音
-    await drink.play();
-
-    flash();
-
-    // 🔥 飲み終わったらBGM開始
-    bgm.play();
-
-    // 画面
-    screen.style.opacity = 0;
-    setTimeout(()=>{
-        screen.style.display="none";
-        main.style.opacity = 1;
-    },1000);
+function formatText(text) {
+    return text
+        .replace(/([、。！？」])/g, '$1<br>')
+        .replace(/([一-龠々]+)\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
 }
 
-function next(){
-    flash();
-    drink.currentTime = 0;
-    drink.play();
+async function typeWriter(text) {
+    if (isTyping) return;
+    isTyping = true;
+
+    triviaText.innerHTML = '';
+
+    const html = formatText(text);
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const nodes = Array.from(temp.childNodes);
+
+    for (const node of nodes) {
+        if (node.nodeType === 3) {
+            for (const c of node.textContent) {
+                triviaText.innerHTML += c;
+                await new Promise(r => setTimeout(r, 30));
+            }
+        } else {
+            triviaText.appendChild(node.cloneNode(true));
+        }
+    }
+
+    isTyping = false;
 }
 
+function showDaily() {
+    if (!allData.length) return;
+    const i = Math.floor(Math.random() * allData.length);
+    typeWriter(allData[i]);
+}
+
+const potionColors = [
+    { bg: '#e6f7ff', glow: 'rgba(120, 190, 255, 0.35)' },
+    { bg: '#ffe6f2', glow: 'rgba(255, 140, 190, 0.35)' },
+    { bg: '#fff4cc', glow: 'rgba(255, 210, 90, 0.35)' },
+    { bg: '#e8ffd9', glow: 'rgba(140, 220, 120, 0.35)' },
+    { bg: '#f0e6ff', glow: 'rgba(180, 120, 255, 0.35)' },
+    { bg: '#ffe9d6', glow: 'rgba(255, 160, 100, 0.35)' },
+    { bg: '#e6fff9', glow: 'rgba(120, 230, 210, 0.35)' }
+];
+
+function flashPotionEffect() {
+    const color = potionColors[Math.floor(Math.random() * potionColors.length)];
+    document.body.style.backgroundColor = color.bg;
+    mainContent.style.boxShadow = '0 0 34px ' + color.glow;
+    mainContent.style.transform = 'scale(1.02)';
+
+    setTimeout(() => {
+        document.body.style.backgroundColor = '#f0f2f5';
+        mainContent.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+        mainContent.style.transform = 'scale(1)';
+    }, 1800);
+}
+
+function fadeInBgm() {
+    bgm.volume = 0.0;
+
+    const p = bgm.play();
+    if (p && typeof p.catch === 'function') {
+        p.catch(e => {
+            console.error('BGM再生失敗', e);
+        });
+    }
+
+    let vol = 0.0;
+    const timer = setInterval(() => {
+        vol += 0.02;
+        if (vol >= 0.25) {
+            vol = 0.25;
+            clearInterval(timer);
+        }
+        bgm.volume = vol;
+    }, 120);
+}
+
+async function playDrinkOnly() {
+    try {
+        drinkSe.pause();
+        drinkSe.currentTime = 0;
+        await drinkSe.play();
+        return true;
+    } catch (e) {
+        console.error('飲む音再生失敗', e);
+        return false;
+    }
+}
+
+function startScreenHide() {
+    startScreen.style.opacity = '0';
+    setTimeout(() => {
+        startScreen.style.display = 'none';
+        mainContent.style.opacity = '1';
+    }, 1000);
+}
+
+async function startExperience() {
+    if (hasStarted) return;
+    hasStarted = true;
+
+    flashPotionEffect();
+    startScreenHide();
+
+    const drinkOk = await playDrinkOnly();
+    showDaily();
+
+    if (drinkOk) {
+        const duration = isFinite(drinkSe.duration) && drinkSe.duration > 0
+            ? drinkSe.duration * 1000
+            : 1200;
+
+        setTimeout(() => {
+            fadeInBgm();
+        }, duration + 150);
+    } else {
+        fadeInBgm();
+    }
+}
+
+async function getRandomTrivia() {
+    if (isTyping) return;
+
+    flashPotionEffect();
+    playDrinkOnly();
+    showDaily();
+}
+
+loadData();
 </script>
 
 </body>
