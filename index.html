@@ -15,7 +15,7 @@
             min-height: 100vh;
             margin: 0;
             overflow: hidden;
-            transition: background-color 0.6s ease;
+            transition: background-color 1.8s ease;
         }
 
         #startScreen {
@@ -38,7 +38,7 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             text-align: center;
             opacity: 0;
-            transition: opacity 2s ease, box-shadow 0.6s ease, transform 0.6s ease;
+            transition: opacity 2s ease, box-shadow 1.2s ease, transform 1.2s ease;
         }
 
         h1 {
@@ -113,7 +113,7 @@
 </audio>
 
 <audio id="drinkSe" preload="auto">
-    <source src="https://nao200x2012-design.github.io/seisinpo-syonn/drink.mp3" type="audio/mpeg">
+    <source src="https://nao200x2012-design.github.io/seisinpo-syonn/gulp_down_water1.mp3" type="audio/mpeg">
 </audio>
 
 <script>
@@ -189,16 +189,28 @@ function showDaily() {
     typeWriter(allData[i]);
 }
 
+const potionColors = [
+    { bg: '#e6f7ff', glow: 'rgba(120, 190, 255, 0.35)' }, // 青
+    { bg: '#ffe6f2', glow: 'rgba(255, 140, 190, 0.35)' }, // 桃
+    { bg: '#fff4cc', glow: 'rgba(255, 210, 90, 0.35)' },  // 黄
+    { bg: '#e8ffd9', glow: 'rgba(140, 220, 120, 0.35)' }, // 緑
+    { bg: '#f0e6ff', glow: 'rgba(180, 120, 255, 0.35)' }, // 紫
+    { bg: '#ffe9d6', glow: 'rgba(255, 160, 100, 0.35)' }, // 橙
+    { bg: '#e6fff9', glow: 'rgba(120, 230, 210, 0.35)' }  // 水色
+];
+
 function flashPotionEffect() {
-    document.body.style.backgroundColor = '#e6f7ff';
-    mainContent.style.boxShadow = '0 0 30px rgba(120, 190, 255, 0.35)';
-    mainContent.style.transform = 'scale(1.01)';
+    const color = potionColors[Math.floor(Math.random() * potionColors.length)];
+
+    document.body.style.backgroundColor = color.bg;
+    mainContent.style.boxShadow = '0 0 34px ' + color.glow;
+    mainContent.style.transform = 'scale(1.02)';
 
     setTimeout(() => {
         document.body.style.backgroundColor = '#f0f2f5';
         mainContent.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
         mainContent.style.transform = 'scale(1)';
-    }, 600);
+    }, 1800);
 }
 
 async function playDrinkSe() {
@@ -230,7 +242,6 @@ async function startBgmWithFade() {
 
     } catch (e) {
         console.error('BGM再生失敗', e);
-        alert('BGM再生失敗: ' + e.name + ' / ' + e.message);
     }
 }
 
