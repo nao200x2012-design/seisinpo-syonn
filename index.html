@@ -130,7 +130,7 @@ const audio = document.getElementById('bgm');
 const drinkSe = document.getElementById('drinkSe');
 
 audio.volume = 0.3;
-drinkSe.volume = 0.8;
+drinkSe.volume = 1.0;
 
 async function loadData() {
     try {
@@ -217,8 +217,10 @@ async function playDrinkSe() {
         drinkSe.pause();
         drinkSe.currentTime = 0;
         await drinkSe.play();
+        return true;
     } catch (e) {
         console.error('効果音再生失敗', e);
+        return false;
     }
 }
 
@@ -247,18 +249,27 @@ async function startBgmWithFade() {
     }
 }
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function startExperience() {
     if (hasStarted) return;
-
-    // iPhone向けに、最初のタップではBGMを最優先
-    const bgmStarted = await startBgmWithFade();
-    if (!bgmStarted) return;
-
     hasStarted = true;
 
-    // 効果音は失敗しても止めない
-    playDrinkSe();
     flashPotionEffect();
+
+    // まず飲む音を鳴らす
+    await playDrinkSe();
+
+    // 少し間をあけてからBGM開始
+    await sleep(500);
+
+    const bgmStarted = await startBgmWithFade();
+    if (!bgmStarted) {
+        hasStarted = false;
+        return;
+    }
 
     startScreen.style.opacity = '0';
     setTimeout(() => {
