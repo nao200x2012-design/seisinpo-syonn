@@ -108,11 +108,11 @@
     <button class="sub-btn" onclick="getRandomTrivia()">もう一口飲む</button>
 </div>
 
-<audio id="bgm" loop preload="auto">
+<audio id="bgm" loop preload="auto" playsinline webkit-playsinline>
     <source src="https://nao200x2012-design.github.io/seisinpo-syonn/bgm_final.mp3" type="audio/mpeg">
 </audio>
 
-<audio id="drinkSe" preload="auto">
+<audio id="drinkSe" preload="auto" playsinline webkit-playsinline>
     <source src="https://nao200x2012-design.github.io/seisinpo-syonn/gulp_down_water1.mp3" type="audio/mpeg">
 </audio>
 
@@ -122,6 +122,7 @@ const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS8MJY0GISlxjjJs
 let allData = [];
 let isTyping = false;
 let hasStarted = false;
+let fadeTimer = null;
 
 const startScreen = document.getElementById('startScreen');
 const mainContent = document.getElementById('mainContent');
@@ -129,7 +130,7 @@ const triviaText = document.getElementById('triviaText');
 const audio = document.getElementById('bgm');
 const drinkSe = document.getElementById('drinkSe');
 
-audio.volume = 0.3;
+audio.volume = 0.0;
 drinkSe.volume = 1.0;
 
 async function loadData() {
@@ -212,64 +213,68 @@ function flashPotionEffect() {
     }, 1800);
 }
 
-async function playDrinkSe() {
+function playDrinkSe() {
     try {
         drinkSe.pause();
         drinkSe.currentTime = 0;
-        await drinkSe.play();
-        return true;
+        const p = drinkSe.play();
+        if (p && typeof p.catch === 'function') {
+            p.catch(e => console.error('効果音再生失敗', e));
+        }
     } catch (e) {
         console.error('効果音再生失敗', e);
-        return false;
     }
 }
 
-async function startBgmWithFade() {
+function startBgmNow() {
     try {
         audio.pause();
         audio.currentTime = 0;
-        audio.volume = 0;
-        await audio.play();
+        audio.volume = 0.0;
 
-        let vol = 0;
-        const fade = setInterval(() => {
-            vol += 0.02;
-            if (vol >= 0.3) {
-                vol = 0.3;
-                clearInterval(fade);
-            }
-            audio.volume = vol;
-        }, 100);
-
-        return true;
+        const p = audio.play();
+        if (p && typeof p.then === 'function') {
+            p.then(() => {
+                startBgmFadeLater();
+            }).catch(e => {
+                console.error('BGM再生失敗', e);
+                alert('BGM再生失敗: ' + e.name + ' / ' + e.message);
+            });
+        } else {
+            startBgmFadeLater();
+        }
     } catch (e) {
         console.error('BGM再生失敗', e);
         alert('BGM再生失敗: ' + e.name + ' / ' + e.message);
-        return false;
     }
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+function startBgmFadeLater() {
+    if (fadeTimer) {
+        clearInterval(fadeTimer);
+    }
+
+    setTimeout(() => {
+        let vol = 0.0;
+        fadeTimer = setInterval(() => {
+            vol += 0.02;
+            if (vol >= 0.25) {
+                vol = 0.25;
+                clearInterval(fadeTimer);
+            }
+            audio.volume = vol;
+        }, 100);
+    }, 500);
 }
 
-async function startExperience() {
+function startExperience() {
     if (hasStarted) return;
     hasStarted = true;
 
+    // 最初のタップの中で両方に即 play をかける
+    playDrinkSe();
+    startBgmNow();
     flashPotionEffect();
-
-    // まず飲む音を鳴らす
-    await playDrinkSe();
-
-    // 少し間をあけてからBGM開始
-    await sleep(500);
-
-    const bgmStarted = await startBgmWithFade();
-    if (!bgmStarted) {
-        hasStarted = false;
-        return;
-    }
 
     startScreen.style.opacity = '0';
     setTimeout(() => {
@@ -280,11 +285,11 @@ async function startExperience() {
     showDaily();
 }
 
-async function getRandomTrivia() {
+function getRandomTrivia() {
     if (isTyping) return;
 
-    flashPotionEffect();
     playDrinkSe();
+    flashPotionEffect();
     showDaily();
 }
 
